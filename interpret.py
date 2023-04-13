@@ -216,10 +216,19 @@ class Execute:
         self.frame_stack = []
         self.temporary_frame = None
         self.global_frame = {}
-        self.instruction_counter = 0
+        self.instruction_counter = int(0)
         self.labels = {}
 
+    def load_labels(self):
+        for instruction in self.instruction_list:
+            if instruction.opcode == "LABEL":
+                if instruction.arg1.value in self.labels:
+                    exit(52)
+                self.labels[instruction.arg1.value] = int(instruction.order)
+
     def execute(self):
+
+        self.load_labels()
         while self.instruction_counter < len(self.instruction_list):
             
             if self.instruction_list[self.instruction_counter].opcode == "MOVE":
@@ -241,7 +250,7 @@ class Execute:
                 self.call(self.instruction_list[self.instruction_counter])
             
             elif self.instruction_list[self.instruction_counter].opcode == "RETURN":
-                self.return_(self.instruction_list[self.instruction_counter])
+                self.return_()
             
             elif self.instruction_list[self.instruction_counter].opcode == "PUSHS":
                 self.pushs(self.instruction_list[self.instruction_counter])
@@ -306,8 +315,8 @@ class Execute:
             elif self.instruction_list[self.instruction_counter].opcode == "TYPE":
                 self.type_(self.instruction_list[self.instruction_counter])
             
-            elif self.instruction_list[self.instruction_counter].opcode == "LABEL":
-                self.label(self.instruction_list[self.instruction_counter])
+            #elif self.instruction_list[self.instruction_counter].opcode == "LABEL":
+            #    self.label(self.instruction_list[self.instruction_counter])
             
             elif self.instruction_list[self.instruction_counter].opcode == "JUMP":
                 self.jump(self.instruction_list[self.instruction_counter])
@@ -393,10 +402,14 @@ class Execute:
             return value
         
         elif arg.type in ("int", "bool", "string", "nil"):
-            return arg.value
+            
+            if arg.type == "string" and arg.value is None:
+                return ""
+            else:
+                return arg.value
        
-        elif arg.type == "nil":
-            return None
+        #elif arg.type == "nil":
+        #    return None
         
         else:
             exit(32)
@@ -417,6 +430,8 @@ class Execute:
 
         if inst.arg2.type == 'string':
             arg2 = self.string_replace(arg2)
+            if inst.arg2.value is None:
+                inst.arg2.value = ""
         
         frame_name, variable_name = self.get_frame(inst.arg1)
         if frame_name == 'GF':
@@ -471,16 +486,21 @@ class Execute:
             
 
     def call(self, inst):
-        if inst.arg1.type == "label":
-            self.instruction_counter = self.labels[self.instruction_list[self.instruction_counter].arg1.value]
-        else:
+        if inst.arg1.type != "label":
             exit(32)
+        
+        if inst.arg1.value in self.labels:
+            self.call_stack.append(self.instruction_counter)
+            self.instruction_counter = self.labels[inst.arg1.value] - 1
+        else:
+            exit(52)
+
     
     def return_(self):
-        if len(self.frame_stack) == 0:
+        if len(self.call_stack) == 0:
             exit(56)
         else:
-            self.instruction_counter = self.frame_stack.pop()
+            self.instruction_counter = self.call_stack.pop()
 
     def pushs(self, inst):
         arg1 = self.symb_check(inst.arg1, {'int', 'bool', 'string', 'var', 'nil'}, None)
@@ -601,6 +621,73 @@ class Execute:
             self.temporary_frame[variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
         else:
             exit(32)
+    
+    def lt(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+        
+        if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
+            exit(56)
+
+        if inst.arg2.type != inst.arg3.type:
+            exit(53)
+
+        if inst.arg2.type == 'bool':
+            if arg2_value == 'true':
+                arg2_value = 1
+            else:
+                arg2_value = 0
+
+            if arg3_value == 'true':
+                arg3_value = 1
+            else:
+                arg3_value = 0
+
+            to_assign = arg2_value < arg3_value
+            to_assign = str(to_assign)
+            to_assign = to_assign.lower()    
+
+        if inst.arg2.type == 'int':
+            arg2_value = int(arg2_value)
+            arg3_value = int(arg3_value)
+        
+        pattern = re.compile(r'\\([0-7]{3})')
+        if inst.arg2.type == 'string':
+            arg2_value = pattern.sub(lambda x: chr(int(x.group(1), 8)), arg2_value)
+
+        if inst.arg3.type == 'string':
+            arg3_value = pattern.sub(lambda x: chr(int(x.group(1), 8)), arg3_value)
+
+        if arg2_value is None and inst.arg2.type == 'string':
+            arg2_value = str(arg2_value)
+        
+        if arg3_value is None and inst.arg3.type == 'string':
+            arg3_value = str(arg3_value)
+
+        
+        if inst.arg2.type != 'bool':
+            to_assign = arg2_value < arg3_value
+            to_assign = str(to_assign)
+            to_assign = to_assign.lower()
+
+        print("XX",to_assign, arg2_value, arg3_value, "XX")
+        
+        
+        frame_name, variable_name = self.get_frame(inst.arg1)
+        if frame_name == 'GF':
+            self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        elif frame_name == 'LF':
+            if self.frame_stack[-1] is None:
+                exit(55)
+            self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+        elif frame_name == 'TF':
+            if self.temporary_frame is None:
+                exit(55)
+            self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
     
 
     def write(self, inst):
