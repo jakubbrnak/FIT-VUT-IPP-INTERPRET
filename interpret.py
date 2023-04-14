@@ -402,7 +402,7 @@ class Execute:
          
             return value
         
-        elif arg.type in ("int", "bool", "string", "nil", "type"):
+        elif arg.type in ("int", "bool", "string", "nil", "type", "label"):
             
             if arg.type == "string" and arg.value is None:
                 return ""
@@ -1153,8 +1153,85 @@ class Execute:
         else:
             exit(32)
 
+    def jump(self, inst):
+        self.symb_check(inst.arg1, {'label'}, None)
+        self.instruction_counter = self.labels[inst.arg1.value] - 1
+    
+    def jumpifeq(self, inst):
+        arg1_value = self.symb_check(inst.arg1, {'label'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if arg1_value not in self.labels:
+            exit(52)
+        
+        if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
+            if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
+                value = True
+            else:
+                value = False
+        else:
+            if inst.arg2.type != inst.arg3.type:
+                exit(53)
+        
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        
+        if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        value = arg2_value == arg3_value
+
+        if value == True:
+            self.instruction_counter = self.labels[inst.arg1.value] - 1
+
+    def jumpifneq(self, inst):
+        arg1_value = self.symb_check(inst.arg1, {'label'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if arg1_value not in self.labels:
+            exit(52)
+        
+        if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
+            if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
+                value = True
+            else:
+                value = False
+        else:
+            if inst.arg2.type != inst.arg3.type:
+                exit(53)
+        
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        
+        if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        value = arg2_value == arg3_value
+
+        if value == False:
+            self.instruction_counter = self.labels[inst.arg1.value] - 1
 
 
+    def exit(self, inst):
+        arg1_value = self.symb_check(inst.arg1, {'int', 'var'}, {'int'})
+        
+       
+        if arg1_value is None:
+            exit(56)
+
+        arg1_value = int(arg1_value)
+        if arg1_value < 0 or arg1_value > 49:
+            exit(57)
+
+        sys.exit(arg1_value)
     
     
 
