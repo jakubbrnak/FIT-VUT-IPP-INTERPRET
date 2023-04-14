@@ -369,7 +369,8 @@ class Execute:
                 if variable_name not in self.global_frame:
                     exit(54)
 
-                if var_type and self.global_frame[variable_name]['type'] != None and self.global_frame[variable_name]['type'] != var_type:
+                if var_type and self.global_frame[variable_name]['type'] != None and self.global_frame[variable_name]['type'] not in var_type:
+                    #print("AAAAAAAAAAAA")
                     exit(53)
                 value = self.global_frame[variable_name]['value']
             
@@ -383,7 +384,7 @@ class Execute:
                 if variable_name not in self.frame_stack[-1]:
                     exit(54)
                
-                if var_type and self.frame_stack[-1][variable_name]['type'] != None and self.frame_stack[-1][variable_name]['type'] != var_type:
+                if var_type and self.frame_stack[-1][variable_name]['type'] != None and self.frame_stack[-1][variable_name]['type'] not in var_type:
                     exit(53)
                 value = self.frame_stack[-1][variable_name]['value']
             
@@ -394,14 +395,14 @@ class Execute:
                 if variable_name not in self.temporary_frame:
                     exit(54)
 
-                if var_type and self.temporary_frame[variable_name]['type'] != None and self.temporary_frame[variable_name]['type'] != var_type:
+                if var_type and self.temporary_frame[variable_name]['type'] != None and self.temporary_frame[variable_name]['type'] not in var_type:
                     exit(53)    
                 
                 value = self.temporary_frame[variable_name]['value']
          
             return value
         
-        elif arg.type in ("int", "bool", "string", "nil"):
+        elif arg.type in ("int", "bool", "string", "nil", "type"):
             
             if arg.type == "string" and arg.value is None:
                 return ""
@@ -420,6 +421,21 @@ class Execute:
         toreplace = toreplace.replace("\\010", "\n")
         toreplace = toreplace.replace("\\035", "#")
         return toreplace
+    
+    def assign(self, arg, to_assign, type_):
+        frame_name, variable_name = self.get_frame(arg)
+        if frame_name == 'GF':
+            self.global_frame[variable_name]= {'value': to_assign, 'type': type_}
+        elif frame_name == 'LF':
+            if len(self.frame_stack) == 0:
+                exit(55)
+            self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': type_}
+        elif frame_name == 'TF':
+            if self.temporary_frame is None:
+                exit(55)
+            self.temporary_frame[variable_name] = {'value': to_assign, 'type': type_}
+        else:
+            exit(32)
 
     def move(self, inst):
         arg1 = self.symb_check(inst.arg1, 'var', None)
@@ -432,19 +448,22 @@ class Execute:
             arg2 = self.string_replace(arg2)
             if inst.arg2.value is None:
                 inst.arg2.value = ""
-        
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        if frame_name == 'GF':
-            self.global_frame[variable_name]['value'] = inst.arg2.value
-            self.global_frame[variable_name]['type'] = inst.arg2.type
-        elif frame_name == 'LF':
-            self.frame_stack[-1][variable_name]['value'] = inst.arg2.value
-            self.frame_stack[-1][variable_name]['type'] = inst.arg2.type
-        elif frame_name == 'TF':
-            self.temporary_frame[variable_name]['value'] = inst.arg2.value
-            self.temporary_frame[variable_name]['type'] = inst.arg2.type
-        else:
-            exit(32)
+
+        self.assign(inst.arg1, arg2, inst.arg2.type)
+
+
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name]['value'] = inst.arg2.value
+    #        self.global_frame[variable_name]['type'] = inst.arg2.type
+    #    elif frame_name == 'LF':
+    #        self.frame_stack[-1][variable_name]['value'] = inst.arg2.value
+    #        self.frame_stack[-1][variable_name]['type'] = inst.arg2.type
+    #    elif frame_name == 'TF':
+    #        self.temporary_frame[variable_name]['value'] = inst.arg2.value
+    #        self.temporary_frame[variable_name]['type'] = inst.arg2.type
+    #    else:
+    #        exit(32)
 
     def createframe(self):
         self.temporary_frame = {}
@@ -516,10 +535,12 @@ class Execute:
             exit(56)
         arg1 = self.symb_check(inst.arg1, {'var'}, None)
         
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        if frame_name == 'GF':
-            self.global_frame[variable_name]['value'] = self.data_stack.pop()
-            self.global_frame[variable_name]['type'] = type(self.global_frame[variable_name]['value'])
+        to_assign = self.data_stack.pop()
+        self.assign(inst.arg1, to_assign, type(to_assign))
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name]['value'] = self.data_stack.pop()
+    #        self.global_frame[variable_name]['type'] = type(self.global_frame[variable_name]['value'])
 
     def add(self, inst):
         
@@ -531,20 +552,24 @@ class Execute:
             exit(56)
         
         
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        
-        if frame_name == 'GF':
-            self.global_frame[variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
-        elif frame_name == 'LF':
-            if not self.frame_stack[-1]:
-                exit(55)  # no frame to define variable in
-            self.frame_stack[-1][variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
-        elif frame_name == 'TF':
-            if not self.temporary_frame:
-                exit(55)  # no frame to define variable in
-            self.temporary_frame[variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
-        else:
-            exit(32)
+
+
+        self.assign(inst.arg1, int(arg2_value) + int(arg3_value), 'int')
+
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
+    #    elif frame_name == 'LF':
+    #        if not self.frame_stack[-1]:
+    #            exit(55)  # no frame to define variable in
+    #        self.frame_stack[-1][variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
+    #    elif frame_name == 'TF':
+    #        if not self.temporary_frame:
+    #            exit(55)  # no frame to define variable in
+    #        self.temporary_frame[variable_name] = {'value': int(arg2_value) + int(arg3_value), 'type': 'int'}
+    #    else:
+    #        exit(32)
 
     
     
@@ -556,20 +581,23 @@ class Execute:
         if arg2_value is None or arg3_value is None:
             exit(56)
 
-        frame_name, variable_name = self.get_frame(inst.arg1)
+
+        self.assign(inst.arg1, int(arg2_value) - int(arg3_value), 'int')
         
-        if frame_name == 'GF':
-            self.global_frame[variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
-        elif frame_name == 'LF':
-            if not self.frame_stack[-1]:
-                exit(55)  # no frame to define variable in
-            self.frame_stack[-1][variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
-        elif frame_name == 'TF':
-            if not self.temporary_frame:
-                exit(55)  # no frame to define variable in
-            self.temporary_frame[variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
-        else:
-            exit(32)
+        ##frame_name, variable_name = self.get_frame(inst.arg1)
+        ##
+        ##if frame_name == 'GF':
+        ##    self.global_frame[variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
+        ##elif frame_name == 'LF':
+        ##    if not self.frame_stack[-1]:
+        ##        exit(55)  # no frame to define variable in
+        ##    self.frame_stack[-1][variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
+        ##elif frame_name == 'TF':
+        ##    if not self.temporary_frame:
+        ##        exit(55)  # no frame to define variable in
+        ##    self.temporary_frame[variable_name] = {'value': int(arg2_value) - int(arg3_value), 'type': 'int'}
+        ##else:
+        ##    exit(32)
     
     def mul(self, inst):
         self.symb_check(inst.arg1, {'var'}, None)
@@ -579,21 +607,21 @@ class Execute:
         if arg2_value is None or arg3_value is None:
             exit(56)
         
-        
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        
-        if frame_name == 'GF':
-            self.global_frame[variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
-        elif frame_name == 'LF':
-            if not self.frame_stack[-1]:
-                exit(55)  # no frame to define variable in
-            self.frame_stack[-1][variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
-        elif frame_name == 'TF':
-            if not self.temporary_frame:
-                exit(55)  # no frame to define variable in
-            self.temporary_frame[variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
-        else:
-            exit(32)
+        self.assign(inst.arg1, int(arg2_value) * int(arg3_value), 'int')
+      #  frame_name, variable_name = self.get_frame(inst.arg1)
+      #  
+      #  if frame_name == 'GF':
+      #      self.global_frame[variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
+      #  elif frame_name == 'LF':
+      #      if not self.frame_stack[-1]:
+      #          exit(55)  # no frame to define variable in
+      #      self.frame_stack[-1][variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
+      #  elif frame_name == 'TF':
+      #      if not self.temporary_frame:
+      #          exit(55)  # no frame to define variable in
+      #      self.temporary_frame[variable_name] = {'value': int(arg2_value) * int(arg3_value), 'type': 'int'}
+      #  else:
+      #      exit(32)
     
 
     def idiv(self, inst):
@@ -606,21 +634,23 @@ class Execute:
         
         if int(arg3_value) == 0:
             exit(57)
-        
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        
-        if frame_name == 'GF':
-            self.global_frame[variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
-        elif frame_name == 'LF':
-            if not self.frame_stack[-1]:
-                exit(55)  # no frame to define variable in
-            self.frame_stack[-1][variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
-        elif frame_name == 'TF':
-            if not self.temporary_frame:
-                exit(55)  # no frame to define variable in
-            self.temporary_frame[variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
-        else:
-            exit(32)
+
+        self.assign(inst.arg1, int(arg2_value) // int(arg3_value), 'int')
+
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
+    #    elif frame_name == 'LF':
+    #        if not self.frame_stack[-1]:
+    #            exit(55)  # no frame to define variable in
+    #        self.frame_stack[-1][variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
+    #    elif frame_name == 'TF':
+    #        if not self.temporary_frame:
+    #            exit(55)  # no frame to define variable in
+    #        self.temporary_frame[variable_name] = {'value': int(arg2_value) // int(arg3_value), 'type': 'int'}
+    #    else:
+    #        exit(32)
     
     def lt(self, inst):
         self.symb_check(inst.arg1, {'var'}, None)
@@ -647,48 +677,330 @@ class Execute:
             else:
                 arg3_value = 0
 
-            to_assign = arg2_value < arg3_value
-            to_assign = str(to_assign)
-            to_assign = to_assign.lower()    
+            to_assign = arg2_value < arg3_value   
 
         if inst.arg2.type == 'int':
             arg2_value = int(arg2_value)
             arg3_value = int(arg3_value)
         
-        pattern = re.compile(r'\\([0-7]{3})')
-        if inst.arg2.type == 'string':
-            arg2_value = pattern.sub(lambda x: chr(int(x.group(1), 8)), arg2_value)
-
-        if inst.arg3.type == 'string':
-            arg3_value = pattern.sub(lambda x: chr(int(x.group(1), 8)), arg3_value)
-
-        if arg2_value is None and inst.arg2.type == 'string':
-            arg2_value = str(arg2_value)
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
         
-        if arg3_value is None and inst.arg3.type == 'string':
-            arg3_value = str(arg3_value)
-
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
         
         if inst.arg2.type != 'bool':
             to_assign = arg2_value < arg3_value
-            to_assign = str(to_assign)
-            to_assign = to_assign.lower()
+             
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
 
-        print("XX",to_assign, arg2_value, arg3_value, "XX")
+        self.assign(inst.arg1, to_assign, 'bool')
         
         
-        frame_name, variable_name = self.get_frame(inst.arg1)
-        if frame_name == 'GF':
-            self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
-        elif frame_name == 'LF':
-            if self.frame_stack[-1] is None:
-                exit(55)
-            self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
-        elif frame_name == 'TF':
-            if self.temporary_frame is None:
-                exit(55)
-            self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
-    
+        
+        #frame_name, variable_name = self.get_frame(inst.arg1)
+        #if frame_name == 'GF':
+        #    self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'LF':
+        #    if self.frame_stack[-1] is None:
+        #        exit(55)
+        #    self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'TF':
+        #    if self.temporary_frame is None:
+        #        exit(55)
+        #    self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #else:
+        #    exit(32)
+
+    def gt(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+        
+        if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
+            exit(53)
+
+        if inst.arg2.type != inst.arg3.type:
+            exit(53)
+
+        if inst.arg2.type == 'bool':
+            if arg2_value == 'true':
+                arg2_value = 1
+            else:
+                arg2_value = 0
+
+            if arg3_value == 'true':
+                arg3_value = 1
+            else:
+                arg3_value = 0
+
+            to_assign = arg2_value > arg3_value   
+
+        if inst.arg2.type == 'int':
+            arg2_value = int(arg2_value)
+            arg3_value = int(arg3_value)
+        
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        if inst.arg2.type != 'bool':
+            to_assign = arg2_value > arg3_value
+             
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
+
+        self.assign(inst.arg1, to_assign, 'bool')
+
+
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'LF':
+    #        if self.frame_stack[-1] is None:
+    #            exit(55)
+    #        self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'TF':
+    #        if self.temporary_frame is None:
+    #            exit(55)
+    #        self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    else:
+    #        exit(32)
+
+    def eq(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+        
+        if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
+            if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
+                to_assign = True
+            else:
+                to_assign = False
+        else:
+            if inst.arg2.type != inst.arg3.type:
+                exit(53)
+        
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        
+        if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        to_assign = arg2_value == arg3_value
+
+        #print("XX", to_assign, arg2_value, arg3_value, "XX")
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
+
+        self.assign(inst.arg1, to_assign, 'bool')
+
+        #frame_name, variable_name = self.get_frame(inst.arg1)
+        #if frame_name == 'GF':
+        #    self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'LF':
+        #    if self.frame_stack[-1] is None:
+        #        exit(55)
+        #    self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'TF':
+        #    if self.temporary_frame is None:
+        #        exit(55)
+        #    self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #else:
+        #    exit(32)
+
+    def and_(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
+        arg3_value = self.symb_check(inst.arg3, {'bool', 'var'}, {'bool'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+        
+        if arg2_value == 'true' and arg3_value == 'true':
+            to_assign = True
+        else:
+            to_assign = False
+        
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
+
+        self.assign(inst.arg1, to_assign, 'bool')
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'LF':
+    #        if self.frame_stack[-1] is None:
+    #            exit(55)
+    #        self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'TF':
+    #        if self.temporary_frame is None:
+    #            exit(55)
+    #        self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    else:
+    #        exit(32)
+
+    def or_(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
+        arg3_value = self.symb_check(inst.arg3, {'bool', 'var'}, {'bool'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+        
+        if arg2_value == 'true' or arg3_value == 'true':
+            to_assign = True
+        else:
+            to_assign = False
+        
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
+
+        self.assign(inst.arg1, to_assign, 'bool')
+        #frame_name, variable_name = self.get_frame(inst.arg1)
+        #if frame_name == 'GF':
+        #    self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'LF':
+        #    if self.frame_stack[-1] is None:
+        #        exit(55)
+        #    self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+        #elif frame_name == 'TF':
+        #    if self.temporary_frame is None:
+        #        exit(55)
+        #    self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+        #else:
+        #    exit(32)
+
+    def not_(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
+
+        if arg2_value is None:
+            exit(56)
+
+        if arg2_value == 'true':
+            to_assign = False
+        else:
+            to_assign = True
+
+        to_assign = str(to_assign)
+        to_assign = to_assign.lower()
+
+        self.assign(inst.arg1, to_assign, 'bool')
+    #    frame_name, variable_name = self.get_frame(inst.arg1)
+    #    if frame_name == 'GF':
+    #        self.global_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'LF':
+    #        if self.frame_stack[-1] is None:
+    #            exit(55)
+    #        self.frame_stack[-1][variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    elif frame_name == 'TF':
+    #        if self.temporary_frame is None:
+    #            exit(55)
+    #        self.temporary_frame[variable_name] = {'value': to_assign, 'type': 'bool'}
+    #    else:
+    #        exit(32)
+
+        
+
+        
+
+
+        #    if inst.arg2.type == 'int':
+        #        arg2_value = int(arg2_value)
+        #        arg3_value = int(arg3_value)
+        #    
+        #    if inst.arg2.type == 'string':
+        #        arg2_value = s = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        #    
+        #    if inst.arg3.type == 'string':
+        #            arg3_value = s = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+#
+        #    if inst.arg2.type != 'bool':
+        #        to_assign = arg2_value == arg3_value
+        
+    def int2char(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
+
+        if arg2_value is None:
+            exit(56)
+
+        try:
+            to_assign = chr(int(arg2_value))
+        except ValueError:
+            exit(58)
+
+        self.assign(inst.arg1, to_assign, 'string')
+
+    def stri2int(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
+
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if int(arg3_value) < 0 or int(arg3_value) >= len(arg2_value):
+            exit(58)
+
+        try:
+            to_assign = ord(arg2_value[int(arg3_value)])
+        except IndexError:
+            exit(58)
+
+        self.assign(inst.arg1, to_assign, 'int')
+
+    def read(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'type'}, None)
+
+        if arg2_value is None:
+            exit(56)
+
+        if arg2_value == 'int':
+            try:
+                to_assign = input()
+            except EOFError or ValueError:
+                to_assign = 'nil'
+                arg2_value = 'nil'
+        
+        elif arg2_value == 'bool':
+            try:
+                to_assign = input().lower()
+            except EOFError or ValueError:
+                to_assign = 'nil'
+                arg2_value = 'nil'
+           
+            if to_assign != 'nil':
+                if to_assign == 'true':
+                    to_assign = True
+                else:
+                    to_assign = False
+        
+        elif arg2_value == 'string':
+            try:
+                to_assign = input()
+            except EOFError or ValueError:
+                to_assign = 'nil'
+                arg2_value = 'nil'
+            
+            if to_assign != 'nil':
+                to_assign = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), to_assign)
+
+        self.assign(inst.arg1, to_assign, arg2_value)
 
     def write(self, inst):
         arg1 = self.symb_check(inst.arg1, {'var', 'int', 'bool', 'string', 'nil'}, None)
@@ -720,7 +1032,82 @@ class Execute:
             print("", end="")
         else:
             exit(32)
-        
+
+
+    def concat(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
+        arg3_value = self.symb_check(inst.arg3, {'string', 'var'}, {'string'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+        if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        to_assign = arg2_value + arg3_value
+
+        self.assign(inst.arg1, to_assign, 'string')   
+
+    def strlen(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
+
+        if arg2_value is None:
+            exit(56)
+
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+
+        to_assign = len(arg2_value)
+
+        self.assign(inst.arg1, to_assign, 'int') 
+
+    def getchar(self, inst):
+        self.symb_check(inst.arg1, {'var'}, None)
+        arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
+
+        if arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+
+        if int(arg3_value) < 0 or int(arg3_value) >= len(arg2_value):
+            exit(58)
+
+        to_assign = arg2_value[int(arg3_value)]
+
+        self.assign(inst.arg1, to_assign, 'string')
+    
+    def setchar(self, inst):
+        arg1_value = self.symb_check(inst.arg1, {'string', 'var'}, {'string'})
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
+        arg3_value = self.symb_check(inst.arg3, {'string', 'var'}, {'string'})
+
+        if arg1_value is None or arg2_value is None or arg3_value is None:
+            exit(56)
+
+        if inst.arg1.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg1_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg1_value)
+        if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
+            arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+
+        if int(arg2_value) < 0 or int(arg2_value) >= len(arg1_value):
+            exit(58)
+
+        if len(arg3_value) < 1:
+            exit(58)
+
+        if len (arg3_value) > 1:
+            arg3_value = arg3_value[0]
+
+        to_assign = arg1_value[:int(arg2_value)] + arg3_value + arg1_value[int(arg2_value)+1:]
+
+        self.assign(inst.arg1, to_assign, 'string')
 
     def type_(self, inst):
         self.symb_check(inst.arg1, {'var'}, None)
