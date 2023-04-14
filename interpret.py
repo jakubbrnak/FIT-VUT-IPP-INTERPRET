@@ -227,10 +227,12 @@ class Execute:
                 self.labels[instruction.arg1.value] = int(instruction.order)
 
     def execute(self):
-
+        
+        
+        #exit_call = 0
         self.load_labels()
         while self.instruction_counter < len(self.instruction_list):
-            
+        #    print(self.instruction_list[self.instruction_counter].opcode)
             if self.instruction_list[self.instruction_counter].opcode == "MOVE":
                 self.move(self.instruction_list[self.instruction_counter])
             
@@ -247,8 +249,11 @@ class Execute:
                 self.defvar(self.instruction_list[self.instruction_counter])
             
             elif self.instruction_list[self.instruction_counter].opcode == "CALL":
+        
+                #exit_call +=1
                 self.call(self.instruction_list[self.instruction_counter])
-            
+                #if exit_call == 7:
+                 #   exit(0)
             elif self.instruction_list[self.instruction_counter].opcode == "RETURN":
                 self.return_()
             
@@ -360,6 +365,7 @@ class Execute:
     def symb_check(self, arg, type, var_type):
         
         if arg.type not in type:
+            #print("AAAAAAAAAAAA")
             exit(53)
         
         if arg.type == "var":
@@ -385,6 +391,10 @@ class Execute:
                     exit(54)
                
                 if var_type and self.frame_stack[-1][variable_name]['type'] != None and self.frame_stack[-1][variable_name]['type'] not in var_type:
+                    #print("AAAAAAAAAAAA")
+                    #print(self.instruction_counter)
+                    #print(self.frame_stack[-1][variable_name]['type'])
+                    #print(var_type)
                     exit(53)
                 value = self.frame_stack[-1][variable_name]['value']
             
@@ -396,6 +406,10 @@ class Execute:
                     exit(54)
 
                 if var_type and self.temporary_frame[variable_name]['type'] != None and self.temporary_frame[variable_name]['type'] not in var_type:
+                    #print("AAAAAAAAAAAA")
+                    #print(self.instruction_counter)
+                    #print(self.frame_stack[-1][variable_name]['type'])
+                    #print(var_type)
                     exit(53)    
                 
                 value = self.temporary_frame[variable_name]['value']
@@ -416,10 +430,7 @@ class Execute:
             exit(32)
     
     def string_replace(self, toreplace):
-        toreplace = toreplace.replace("\\032", " ")
-        toreplace = toreplace.replace("\\092", "\\")
-        toreplace = toreplace.replace("\\010", "\n")
-        toreplace = toreplace.replace("\\035", "#")
+        toreplace = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), toreplace)
         return toreplace
     
     def assign(self, arg, to_assign, type_):
@@ -483,20 +494,30 @@ class Execute:
             self.temporary_frame = self.frame_stack.pop()
 
     def defvar(self, inst):
+
         frame_name, variable_name = self.get_frame(inst.arg1)
-       
+
         if frame_name == 'GF':
+            if variable_name in self.global_frame:
+                exit(52)
             self.global_frame[variable_name] = {'value': None, 'type': None}
        
         elif frame_name == 'LF':
             if len(self.frame_stack) == 0:
                 exit(55)  # no frame to define variable in
+            
+            if variable_name in self.frame_stack[-1]:
+                exit(52)
             self.frame_stack[-1][variable_name] = {'value': None, 'type': None}
        
         elif frame_name == 'TF':
-            if self.temporary_frame is None:
+           
 
+            if self.temporary_frame is None:
                 exit(55)  # no frame to define variable in
+
+            if variable_name in self.temporary_frame:
+                exit(52)
 
             self.temporary_frame[variable_name] = {'value': None, 'type': None}
         else:
@@ -663,7 +684,7 @@ class Execute:
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             exit(56)
 
-        if inst.arg2.type != inst.arg3.type:
+        if self.get_type(inst.arg2) != self.get_type(inst.arg3):
             exit(53)
 
         if inst.arg2.type == 'bool':
@@ -684,10 +705,10 @@ class Execute:
             arg3_value = int(arg3_value)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+                arg3_value = self.string_replace(arg3_value)
         
         if inst.arg2.type != 'bool':
             to_assign = arg2_value < arg3_value
@@ -724,7 +745,7 @@ class Execute:
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             exit(53)
 
-        if inst.arg2.type != inst.arg3.type:
+        if self.get_type(inst.arg2) != self.get_type(inst.arg3):
             exit(53)
 
         if inst.arg2.type == 'bool':
@@ -745,10 +766,10 @@ class Execute:
             arg3_value = int(arg3_value)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+                arg3_value = self.string_replace(arg3_value)
 
         if inst.arg2.type != 'bool':
             to_assign = arg2_value > arg3_value
@@ -789,12 +810,15 @@ class Execute:
         else:
             if inst.arg2.type != inst.arg3.type:
                 exit(53)
+            
+            #if self.get_type(inst.arg2) != self.get_type(inst.arg3):
+            #  exit(53)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+                arg3_value = self.string_replace(arg3_value)
 
         to_assign = arg2_value == arg3_value
 
@@ -948,7 +972,7 @@ class Execute:
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
 
         if arg2_value is None or arg3_value is None:
             exit(56)
@@ -998,7 +1022,7 @@ class Execute:
                 arg2_value = 'nil'
             
             if to_assign != 'nil':
-                to_assign = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), to_assign)
+                to_assign = self.string_replace(to_assign)
 
         self.assign(inst.arg1, to_assign, arg2_value)
 
@@ -1043,9 +1067,9 @@ class Execute:
             exit(56)
 
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+            arg3_value = self.string_replace(arg3_value)
 
         to_assign = arg2_value + arg3_value
 
@@ -1059,7 +1083,7 @@ class Execute:
             exit(56)
 
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
 
         to_assign = len(arg2_value)
 
@@ -1074,7 +1098,7 @@ class Execute:
             exit(56)
 
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
 
         if int(arg3_value) < 0 or int(arg3_value) >= len(arg2_value):
             exit(58)
@@ -1092,9 +1116,9 @@ class Execute:
             exit(56)
 
         if inst.arg1.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg1_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg1_value)
+            arg1_value = self.string_replace(arg1_value)
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+            arg3_value = self.string_replace(arg3_value)
 
         if int(arg2_value) < 0 or int(arg2_value) >= len(arg1_value):
             exit(58)
@@ -1174,24 +1198,24 @@ class Execute:
             else:
                 value = False
         else:
-            if inst.arg2.type != inst.arg3.type:
+            if self.get_type(inst.arg2) != self.get_type(inst.arg3):
                 exit(53)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+                arg3_value = self.string_replace(arg3_value)
 
-        value = arg2_value == arg3_value
+        value = str(arg2_value) == str(arg3_value)
 
         if value == True:
             self.instruction_counter = self.labels[inst.arg1.value] - 1
 
     def jumpifneq(self, inst):
         arg1_value = self.symb_check(inst.arg1, {'label'}, None)
-        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
-        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
+        arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil', 'var'})
+        arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil', 'var'})
 
         if arg2_value is None or arg3_value is None:
             exit(56)
@@ -1205,20 +1229,21 @@ class Execute:
             else:
                 value = False
         else:
-            if inst.arg2.type != inst.arg3.type:
+            if self.get_type(inst.arg2) != self.get_type(inst.arg3):
                 exit(53)
         
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-            arg2_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg2_value)
+            arg2_value = self.string_replace(arg2_value)
         
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
-                arg3_value = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1), 10)), arg3_value)
+                arg3_value = self.string_replace(arg3_value)
 
-        value = arg2_value == arg3_value
+        value = str(arg2_value) == str(arg3_value)
 
         if value == False:
             self.instruction_counter = self.labels[inst.arg1.value] - 1
 
+        #print(value, arg2_value, arg3_value)
 
     def exit(self, inst):
         arg1_value = self.symb_check(inst.arg1, {'int', 'var'}, {'int'})
