@@ -6,15 +6,8 @@ import xml.etree.ElementTree as ET
 import itertools as it
 
 
-#Tento skript bude pracovat s těmito parametry:
-# --help viz společný parametr všech skriptů v sekci 2.2;
-# --source=file vstupní soubor s XML reprezentací zdrojového kódu dle definice ze sekce 3.1
-# doplnění v úvodu sekce 4;
-# --input=file soubor se vstupy12 pro samotnou interpretaci zadaného zdrojového kódu.
-#Slespoň jeden z parametrů (--source nebo --input) musí být vždy zadán. Pokud jeden z nich
-#chybí, jsou chybějící data načítána ze standardního vstupu.
-
-#write code using argparse
+# 2. časť projektu do predmetu IPP 2022/2023 - interpret jazyka IPPcode23
+# Vypracoval: Jakub Brnák (xbrnak01)
 
 #class for parsing arguments from command line
 class Argument_parser:
@@ -194,13 +187,6 @@ class Interpret:
                     if argument.text not in ["true", "false"]:
                        exit(32)
                 
-            #    if argument.attrib.get("type") == "string":
-            #        if re.match(r"(?!\\[0-9]{3})[\s\\#]", argument.text) is None:
-            #            print(argument.text)
-            #            print("BBBBBBBBBBBBBBBBBBBBB")
-            #            exit(32)
-            #    
-                
                 #<nil>
                 if argument.attrib.get("type") == "nil":
                     if argument.text != "nil":
@@ -239,9 +225,9 @@ class Interpret:
         
         self.load_instructions()
         
-        execute = Execute(self.i.instruction_list)
+        self.execute = Execute(self.i.instruction_list)
         
-        execute.execute()
+        self.execute.execute()
 
 #class for executiin of instructions
 class Execute:
@@ -1323,16 +1309,10 @@ class Execute:
 
         #exit program with given exit code
         sys.exit(arg1_value)
-    
-    
+
 
 if __name__ == '__main__':
     
     #create instance of Interpret class and run main method
     I = Interpret()
     I.main()
-    
-
-
-
-
