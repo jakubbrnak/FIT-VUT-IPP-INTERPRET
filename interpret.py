@@ -593,108 +593,139 @@ class Execute:
         else:
             exit(32)
 
-            
     #execution of instruction CALL
     def call(self, inst):
+
+        #check if argument is of correct type
         if inst.arg1.type != "label":
             exit(32)
         
+        #check if label is defined and set instruction counter to label value
         if inst.arg1.value in self.labels:
             self.call_stack.append(self.instruction_counter)
             self.instruction_counter = self.labels[inst.arg1.value] - 1
         else:
             exit(52)
 
-    
+    #execution of instruction RETURN
     def return_(self):
+
+        #check if call stack is not empty, if it is, exit with error code 56
         if len(self.call_stack) == 0:
             exit(56)
         else:
+
+            #pop value from call stack to instruction counter
             self.instruction_counter = self.call_stack.pop()
 
+    #execution of instruction PUSHS
     def pushs(self, inst):
+        
+        #check if argument is of correct type and get necessary values
         arg1 = self.symb_check(inst.arg1, {'int', 'bool', 'string', 'var', 'nil'}, None)
 
         if arg1 is None:
             exit(56)
         
+        #push value to data stack
         self.data_stack.append(arg1)
 
     def pops(self, inst):
         
+        #check if data stack is not empty, if it is, exit with error code 56
         if len(self.data_stack) == 0:
             exit(56)
-        arg1 = self.symb_check(inst.arg1, {'var'}, None)
+        self.symb_check(inst.arg1, {'var'}, None)
         
+        #pop value from data stack to variable
         to_assign = self.data_stack.pop()
         self.assign(inst.arg1, to_assign, type(to_assign))
-    #    frame_name, variable_name = self.get_frame(inst.arg1)
-    #    if frame_name == 'GF':
-    #        self.global_frame[variable_name]['value'] = self.data_stack.pop()
-    #        self.global_frame[variable_name]['type'] = type(self.global_frame[variable_name]['value'])
 
+    #execution of instruction ADD
     def add(self, inst):
         
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value= self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
-        
-
-
+        #assign value to variable
         self.assign(inst.arg1, int(arg2_value) + int(arg3_value), 'int')
     
+    #execution of instruction SUB
     def sub(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value= self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
 
-
+        #assign value to variable
         self.assign(inst.arg1, int(arg2_value) - int(arg3_value), 'int')
     
+    #execution of instruction MUL
     def mul(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value= self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #assign value to variable
         self.assign(inst.arg1, int(arg2_value) * int(arg3_value), 'int')
 
+    #execution of instruction IDIV
     def idiv(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #check if division by zero occurs, if it does, exit with error code 57
         if int(arg3_value) == 0:
             exit(57)
 
+        #assign value to variable
         self.assign(inst.arg1, int(arg2_value) // int(arg3_value), 'int')
     
+    #execution of instruction LT
     def lt(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #check if areguments are not nil
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             exit(56)
 
+        #check if arguments are of same type
         if self.get_type(inst.arg2) != self.get_type(inst.arg3):
             exit(53)
 
+        #compare variable according to type
         if inst.arg2.type == 'bool':
             if arg2_value == 'true':
                 arg2_value = 1
@@ -724,22 +755,30 @@ class Execute:
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
 
+    #execution of instruction GT
     def gt(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool'}, {'int', 'string', 'bool'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #check if arguments are not nil
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             exit(53)
 
+        #check if arguments are of same type
         if self.get_type(inst.arg2) != self.get_type(inst.arg3):
             exit(53)
 
+        #compare variable according to type
         if inst.arg2.type == 'bool':
             if arg2_value == 'true':
                 arg2_value = 1
@@ -769,16 +808,21 @@ class Execute:
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
 
     def eq(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #check if arguments are of same type or nil
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
                 to_assign = True
@@ -787,10 +831,8 @@ class Execute:
         else:
             if inst.arg2.type != inst.arg3.type:
                 exit(53)
-            
-            #if self.get_type(inst.arg2) != self.get_type(inst.arg3):
-            #  exit(53)
-        
+
+        #compare variable according to type
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
         
@@ -798,21 +840,25 @@ class Execute:
                 arg3_value = self.string_replace(arg3_value)
 
         to_assign = arg2_value == arg3_value
-
-        #print("XX", to_assign, arg2_value, arg3_value, "XX")
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
 
+    #execution of instruction AND
     def and_(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
         arg3_value = self.symb_check(inst.arg3, {'bool', 'var'}, {'bool'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #compare values
         if arg2_value == 'true' and arg3_value == 'true':
             to_assign = True
         else:
@@ -821,16 +867,22 @@ class Execute:
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
-
+    
+    #execution of instruction OR
     def or_(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
         arg3_value = self.symb_check(inst.arg3, {'bool', 'var'}, {'bool'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
         
+        #compare values
         if arg2_value == 'true' or arg3_value == 'true':
             to_assign = True
         else:
@@ -839,15 +891,21 @@ class Execute:
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
-
+    
+    #execution of instruction NOT
     def not_(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'bool', 'var'}, {'bool'})
 
+        #check if argument is present
         if arg2_value is None:
             exit(56)
 
+        #negate value
         if arg2_value == 'true':
             to_assign = False
         else:
@@ -856,63 +914,76 @@ class Execute:
         to_assign = str(to_assign)
         to_assign = to_assign.lower()
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'bool')
 
-        
+    #execution of instruction INT2CHAR
     def int2char(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
 
+        #check if argument is present
         if arg2_value is None:
             exit(56)
 
+        #convert ordinal value to char
         try:
             to_assign = chr(int(arg2_value))
         except ValueError:
             exit(58)
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'string')
 
+    #execution of instruction STRI2INT
     def stri2int(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #edit replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
 
+        #check if index is in range of string
         if int(arg3_value) < 0 or int(arg3_value) >= len(arg2_value):
             exit(58)
 
+        #convert char to ordinal value
         try:
             to_assign = ord(arg2_value[int(arg3_value)])
         except IndexError:
             exit(58)
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'int')
 
+    #execution of instruction READ
     def read(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'type'}, None)
 
+        #check if argument is present
         if arg2_value is None:
             exit(56)
         
-
+        #read value according to type and input file
         if arg2_value == 'int':
             try:
                 if I.input is not None:
                     to_assign = I.input.readline().rstrip()
                 else:
                     to_assign = input()
-                
-             #   if not isinstance(to_assign, int):
-            #        print(to_assign)
-            #       to_assign = 'nil'
-            #        arg2_value = 'nil'
             except EOFError or ValueError:
                 to_assign = 'nil'
                 arg2_value = 'nil'
@@ -942,9 +1013,7 @@ class Execute:
                     to_assign = I.input.readline().rstrip()
                 else:
                     to_assign = input()
-                if not isinstance(to_assign, str):
-                    to_assign = 'nil'
-                    arg2_value = 'nil'
+
             except EOFError or ValueError:
                 to_assign = 'nil'
                 arg2_value = 'nil'
@@ -952,18 +1021,24 @@ class Execute:
             if to_assign != 'nil':
                 to_assign = self.string_replace(to_assign)
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, arg2_value)
 
+    #execution of instruction WRITE
     def write(self, inst):
+
+        #check if argument is of correct type and get necessary values
         arg1 = self.symb_check(inst.arg1, {'var', 'int', 'bool', 'string', 'nil'}, None)
 
+        #check if argument is present
         if arg1 is None:
             exit(56)
 
+        #replace escape sequences if necessary
         if inst.arg1.type == 'string':
             arg1 = self.string_replace(arg1)
         
-
+        #check if value is nil
         if inst.arg1.type == 'var':
             frame_name, variable_name = self.get_frame(inst.arg1)
             if frame_name == 'GF':
@@ -978,6 +1053,7 @@ class Execute:
             else:
                 exit(32)
         
+        #print value
         if inst.arg1.type in ["var","int", "bool", "string"]:
             print(arg1, end="")
         elif inst.arg1.type == "nil":
@@ -985,87 +1061,119 @@ class Execute:
         else:
             exit(32)
 
-
+    #execution of instruction CONCAT
     def concat(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
         arg3_value = self.symb_check(inst.arg3, {'string', 'var'}, {'string'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
 
+        #replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg3_value = self.string_replace(arg3_value)
 
+        #concatenate strings
         to_assign = arg2_value + arg3_value
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'string')   
 
+    #execution of instruction STRLEN
     def strlen(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
 
+        #check if argument is present
         if arg2_value is None:
             exit(56)
 
+        #replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
 
+        #get length of string
         to_assign = len(arg2_value)
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'int') 
 
+    #execution of instruction GETCHAR
     def getchar(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'string', 'var'}, {'string'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var'}, {'int'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
-
+        
+        #replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
 
+        #check if index is out of range
         if int(arg3_value) < 0 or int(arg3_value) >= len(arg2_value):
             exit(58)
 
+        #get character from string
         to_assign = arg2_value[int(arg3_value)]
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'string')
     
+    #execution of instruction SETCHAR
     def setchar(self, inst):
         arg1_value = self.symb_check(inst.arg1, {'string', 'var'}, {'string'})
         arg2_value = self.symb_check(inst.arg2, {'int', 'var'}, {'int'})
         arg3_value = self.symb_check(inst.arg3, {'string', 'var'}, {'string'})
 
+        #check if arguments are present
         if arg1_value is None or arg2_value is None or arg3_value is None:
             exit(56)
 
+        #replace escape sequences if necessary
         if inst.arg1.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg1_value = self.string_replace(arg1_value)
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg3_value = self.string_replace(arg3_value)
 
+        #check if index is out of range
         if int(arg2_value) < 0 or int(arg2_value) >= len(arg1_value):
             exit(58)
 
+        #check if string is empty
         if len(arg3_value) < 1:
             exit(58)
 
+        #check if string is longer than 1 character
         if len (arg3_value) > 1:
             arg3_value = arg3_value[0]
 
+        #set character in string
         to_assign = arg1_value[:int(arg2_value)] + arg3_value + arg1_value[int(arg2_value)+1:]
 
+        #assign value to variable
         self.assign(inst.arg1, to_assign, 'string')
 
+    #execution of instruction TYPE
     def type_(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         self.symb_check(inst.arg1, {'var'}, None)
         arg2_value = self.symb_check(inst.arg2, {'var', 'int', 'bool', 'string', 'nil'}, None)
-
         
+        #check if argument is value is None, if so, assign empty string, else assign type of argument
         if arg2_value is None:
             to_assign = ""
         elif inst.arg2.type == 'var':
@@ -1081,6 +1189,7 @@ class Execute:
         else:
             to_assign = inst.arg2.type
         
+        #assign value to variable
         frame_name, variable_name = self.get_frame(inst.arg1)
         if frame_name == 'GF':
             if to_assign == "":
@@ -1105,25 +1214,35 @@ class Execute:
         else:
             exit(32)
 
+    #execution of instruction LABEL
     def jump(self, inst):
+        #check if argument is of correct type and get necessary value
         arg1_value = self.symb_check(inst.arg1, {'label'}, None)
 
+        #check if label is defined    
         if arg1_value not in self.labels:
             exit(52)
         
+        #set instruction counter to label
         self.instruction_counter = self.labels[inst.arg1.value] - 1
     
+    #execution of instruction JUMPIFEQ
     def jumpifeq(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         arg1_value = self.symb_check(inst.arg1, {'label'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil'})
 
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
 
+        #check if label is defined
         if arg1_value not in self.labels:
             exit(52)
         
+        #check if arguments are of same type or if one of them is nil
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
                 value = True
@@ -1133,28 +1252,37 @@ class Execute:
             if self.get_type(inst.arg2) != self.get_type(inst.arg3):
                 exit(53)
         
+        #replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
         
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
                 arg3_value = self.string_replace(arg3_value)
 
+        #check if arguments are equal
         value = str(arg2_value) == str(arg3_value)
 
+        #set instruction counter to label if arguments are equal
         if value == True:
             self.instruction_counter = self.labels[inst.arg1.value] - 1
 
+    #execution of instruction JUMPIFNEQ
     def jumpifneq(self, inst):
+
+        #check if arguments are of correct type and get necessary values
         arg1_value = self.symb_check(inst.arg1, {'label'}, None)
         arg2_value = self.symb_check(inst.arg2, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil', 'var'})
         arg3_value = self.symb_check(inst.arg3, {'int', 'var', 'string', 'bool', 'nil'}, {'int', 'string', 'bool', 'nil', 'var'})
-
+        
+        #check if arguments are present
         if arg2_value is None or arg3_value is None:
             exit(56)
-
+        
+        #check if label is defined
         if arg1_value not in self.labels:
             exit(52)
         
+        #check if arguments are of same type or if one of them is nil
         if inst.arg2.type == 'nil' or inst.arg3.type == 'nil':
             if inst.arg2.value == 'nil' and inst.arg3.value == 'nil':
                 value = True
@@ -1164,35 +1292,43 @@ class Execute:
             if self.get_type(inst.arg2) != self.get_type(inst.arg3):
                 exit(53)
         
+        #replace escape sequences if necessary
         if inst.arg2.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
             arg2_value = self.string_replace(arg2_value)
         
         if inst.arg3.type == 'string' or (inst.arg3.type == 'var' and self.get_type(inst.arg3) == 'string'):
                 arg3_value = self.string_replace(arg3_value)
 
+        #check if arguments are equal
         value = str(arg2_value) == str(arg3_value)
 
+        #set instruction counter to label if arguments are not equal
         if value == False:
             self.instruction_counter = self.labels[inst.arg1.value] - 1
 
-        #print(value, arg2_value, arg3_value)
-
+    #execution of instruction EXIT
     def exit(self, inst):
+        
+        #check if argument is of correct type and get necessary value
         arg1_value = self.symb_check(inst.arg1, {'int', 'var'}, {'int'})
         
-       
+       #check if argument is present
         if arg1_value is None:
             exit(56)
 
+        #check if argument is of correct value
         arg1_value = int(arg1_value)
         if arg1_value < 0 or arg1_value > 49:
             exit(57)
 
+        #exit program with given exit code
         sys.exit(arg1_value)
     
     
 
 if __name__ == '__main__':
+    
+    #create instance of Interpret class and run main method
     I = Interpret()
     I.main()
     
